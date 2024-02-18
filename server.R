@@ -47,24 +47,8 @@ output$dtFiles <- DT::renderDT(server = FALSE, {
         filesInput(),
         extensions = c("Buttons"),
         options = list(
-          dom = 'Bfrtip',
-          buttons = list(
-            list(extend = "copy", text = "Copy", filename = "sample1_contrib",
-                 exportOptions = list(
-                   modifier = list(page = "all")
-                 )
-            ),
-            list(extend = "csv", text = "CSV", filename = "sample1_contrib",
-                 exportOptions = list(
-                   modifier = list(page = "all")
-                 )
-            ),
-            list(extend = "excel", text = "Excel", filename = "sample1_contrib",
-                 exportOptions = list(
-                   modifier = list(page = "all")
-                 )
-            )
-          )
+          dom = 'Bfrtip'
+         
         )
       )
     })
@@ -93,10 +77,10 @@ output$dtFiles <- DT::renderDT(server = FALSE, {
     )
     
     imzml = table[which(table$type == 'imzML'),c('groupe',  'datapath',  'filename','name', 'replicat')]
-    ibd = table[which(table$type == 'ibd'),c(  'datapath',  'filename')]
+    ibd = table[which(table$type == 'ibd'),c(  'datapath',  'filename','name')]
 
     colnames(imzml)=c('groupe',  'imzml_datapath',  'filename','imzml_name','replicat')
-    colnames(ibd)=c('ibd_datapath',  'filename')
+    colnames(ibd)=c('ibd_datapath',  'filename','ibd_name')
     
     df = merge(imzml,ibd,by='filename')
 
@@ -104,16 +88,23 @@ output$dtFiles <- DT::renderDT(server = FALSE, {
 
   })
 
-  output$groupe <- renderTable({
-
-    files()$table
-
-  })
+  output$groupe <- DT::renderDT(server = FALSE, {
+  req(input$'msi-files')
+      DT::datatable(
+        files()$table[,-c(3,6)][,c(2,4,1,3,5)],
+        extensions = c("Buttons"),
+        options = list(
+          dom = 'Bfrtip'
+         
+        )
+      )
+    })
 
 
 
 
   combineObject<-reactive({
+    req(input$'msi-files')
     datas = files()$table
 
     cardin_object = apply(datas,1,function(x) readMSIData(x[4]))
@@ -177,7 +168,7 @@ output$dtFiles <- DT::renderDT(server = FALSE, {
 
 
   output$Images <-renderPlot({
-
+    req(input$'msi-files')
     image(combineObject()$msiObject)
   })
 
@@ -378,20 +369,20 @@ output$bpMeanReplicat <- renderPlot({
   })
 
   pcaGraphGroupMean <- reactive({
-    req(input$dim1,input$dim2)
+    req(input$'dim1-2',input$'dim2-2')
     res.pca = pcaMean()
     pca_df = res.pca$pca_df_gp
 
     eigen_value =res.pca$eig
 
-    pca_sub = pca_df[,c(as.numeric(input$dim1), as.numeric(input$dim2), 6, 7)]
+    pca_sub = pca_df[,c(as.numeric(input$'dim1-2'), as.numeric(input$'dim2-2'), 6, 7)]
     colnames(pca_sub)= c("x","y","Replicat","Condition")
     pca_sub$x = as.numeric(pca_sub$x)
     pca_sub$y = as.numeric(pca_sub$y)
     
     plot=ggplot(data=pca_sub, aes(x=x, y=y, col=Condition, tooltip=Replicat)) +
       geom_point(size=1) + theme_minimal() +
-      labs(x = paste0("Dimension ", input$dim1," (",eigen_value[as.numeric(input$dim1)],"%)"),y = paste0("Dimension ", input$dim2," (",eigen_value[as.numeric(input$dim2)],"%)")) + 
+      labs(x = paste0("Dimension ", input$'dim1-2'," (",eigen_value[as.numeric(input$'dim1-2')],"%)"),y = paste0("Dimension ", input$'dim2-2'," (",eigen_value[as.numeric(input$'dim2-2')],"%)")) + 
       geom_vline(xintercept=0, linetype="dashed", color = "grey") +
       geom_hline(yintercept=0, linetype="dashed", color = "grey") +
       theme(legend.position="bottom")
@@ -517,7 +508,7 @@ output$bpMeanReplicat <- renderPlot({
 
 
   output$nbClustUI <-renderUI({
-   
+   req(input$'msi-files')
     return(numericInput("nbClust", label = "Choose nb class",
                   length(unique(files()$table$groupe)),step=1))
 
@@ -555,17 +546,22 @@ anova <- reactive({
   data = pairwize()
   aov1 = aov(intensity ~ condition, data = data)
   normality = nortest::ad.test(resid(aov1))
+  inter = ifelse(normality$p.value < 0.05,'=> Reject H0, Residus are not normally distributed','=> No reject H0, Residus are  normally distributed')
+  
+  text = c('normality','Anderson Darling','H0 : Residus are normally distributed', normality$p.value,normality$statistic,inter)
+  
   var = bartlett.test(intensity ~ condition, data = data)
-  text = c('normality','Anderson Darling',normality$p.value,normality$statistic)
+  inter = ifelse(var$p.value < 0.05, '=> Reject H0, At least two samples variances are not equal','=> No reject H0, Samples variances are equal')
 
-  text = rbind(text,c('variance','bartlett',var$p.value,var$statistic))
+  text = rbind(text,c('Homoscedasticity','Bartlett','H0 : Samples variances are equal',var$p.value,var$statistic,inter))
 
   if( normality$p.value > 0.05 || var$p.value > 0.5){
     test = 'anova'
     sm = summary(aov1)[[1]]
     stat = sm[["F value"]][1]
     padj = sm[["Pr(>F)"]][1]
-    text = rbind(text,c('Group comparison','ANOVA',padj,stat))
+    inter = ifelse(padj < 0.05,'=> Reject H0, At least two samples means are not equal','=> No reject H0, Samples means are equal')
+    text = rbind(text,c('Group comparison','ANOVA','H0 : Samples means are equal',padj,stat,inter))
     pairwise_test = 't.test'
     pairwise_table = as.data.frame(pairwise.t.test(as.numeric(data$intensity), as.factor(data$condition), p.adjust.method = "BH")$p.value)
   }
@@ -574,13 +570,15 @@ anova <- reactive({
     res= kruskal.test(intensity ~ condition, data = data)
     stat = res$statistic
     padj = res$p.value 
-    text = rbind(text,c('Group comparison','Kruskal-Wallis',padj,stat))
+    inter = ifelse(padj < 0.05,'=> Reject H0, At least two samples means are not equal','=> No reject H0, Samples means are equal')
+
+    text = rbind(text,c('Group comparison','Kruskal-Wallis','H0 : Samples means are equal',padj,stat,inter))
     pairwise_test = 'wilcoxon'
     pairwise_table = as.data.frame(pairwise.wilcox.test(as.numeric(data$intensity), as.factor(data$condition), p.adjust.method = "BH")$p.value)
 
   }
   text= as.data.frame(text)
-  colnames(text)= c('Test','Name','p-value','Statistic')
+  colnames(text)= c('Test','Name','H0','p-value','Statistic','Interpretation')
 rownames(pairwise_table) = unique(data$condition)[-1]  
   return(list(pairwise_table=pairwise_table,text=text))
 
@@ -604,11 +602,13 @@ ssc_test <-reactive({
 
   })
 output$ssc <- renderPlot({
+  req(input$'msi-files')
   image(ssc_test())
 
 })
 
 output$SSCPlot <- renderPlot({
+  req(input$'msi-files')
   plot(ssc_test())
 
 })

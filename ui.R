@@ -109,18 +109,25 @@ library(plotly)
     tabItem(tabName = "tab1",
         box(width = 12, status = 'info', title = h1("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
           column(width=3,
-        fileInput('msi-files',"Load your imzml files", multiple=TRUE))
+        fileInput('msi-files',"Load your imzml & ibd files", multiple=TRUE))
           #,        numericInput('nb_group',"Enter the number of groupe",2, min=2,step=1)
         ),
         fluidRow(
         tabBox(
     tabPanel("Overwiew",
-      withSpinner( DT::dataTableOutput("dtFiles"), type = 8, color = "#CDCDE6", size = 1)
-      #tableOutput('groupe'),
+      fluidRow(
+        column(width=12,
+        box(width=NULL, status = 'info', solidHeader = TRUE, title = h3("File uploaded", icon('table')),
+         
+      withSpinner( DT::dataTableOutput("dtFiles"), type = 8, color = "#CDCDE6", size = 1))),
+        column(width=12,
+        box(width=NULL, status = 'info', solidHeader = TRUE, title = h3("File grouped", icon('table')),
+          
+          withSpinner( DT::dataTableOutput('groupe'), type = 8, color = "#CDCDE6", size = 1)))
     
-        ),
+        )
      
-        
+     ),   
     tabPanel("Boxplot",
         fluidRow(
 
@@ -154,7 +161,9 @@ library(plotly)
            column(width=3,
         uiOutput('mzChoiceUI')),
            column(width=9,
+            h3('Test applied'),
           tableOutput('pairwiseText'),
+          h3('Pairwise test Results'),
           withSpinner(tableOutput('pairwiseTable'), type = 8, color = "#CDCDE6", size = 1),
           withSpinner(plotOutput('bpPairwise'), type = 8, color = "#CDCDE6", size = 1)
 
@@ -178,9 +187,11 @@ library(plotly)
                 choices = list( "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 2),
           ),
           column(width=5, 
+            h3('Individu graph'),
             withSpinner(plotlyOutput("pcaGroup"), type = 8, color = "#CDCDE6", size = 1)
           ),
           column(width=5,
+            h3('Variable graph'),
             withSpinner(plotlyOutput("pcaMz"), type = 8, color = "#CDCDE6", size = 1)
           ) 
         ),
@@ -215,15 +226,17 @@ library(plotly)
             numericInput("sparsity", "Please provide the sparsity parameter",min=0,step=1,value=0),
             numericInput("smoothing_radius","Please provide the smoothing radius", min=0,step=1,value=0)
           ),
-          column(width=10, 
+          column(width=10,
+            h3('Pixel segmentation'),
             withSpinner(plotOutput("ssc"), type = 8, color = "#CDCDE6", size = 1),
+            h3('M/z segmentation'),
             withSpinner(plotOutput("SSCPlot"), type = 8, color = "#CDCDE6", size = 1)
           )
         )
       )),
     tabPanel("Differential Analysis" ,
       fluidRow(
-        box(width=12,status='success',title = h2('Graph of PCA on mean groups',icon('chart-simple')),solidHeader = TRUE,collapsible=TRUE,
+        box(width=12,status='success',title = h2('Volcano plot',icon('chart-simple')),solidHeader = TRUE,collapsible=TRUE,
           column(width=2,
             uiOutput('condChoiceUI'),
             uiOutput('condChoiceUI2'),
@@ -231,10 +244,21 @@ library(plotly)
 
           ),
           column(width=10, 
-            withSpinner(DT::dataTableOutput("tableAD"), type = 8, color = "#CDCDE6", size = 1),
-            withSpinner(plotlyOutput("volcanoPlot"), type = 8, color = "#CDCDE6", size = 1)
+            withSpinner(plotlyOutput("volcanoPlot"), type = 8, color = "#CDCDE6", size = 1),
+            
+            
           )
-        ))
+        ),
+        column(width=12,
+        box(width=NULL, status = 'info', solidHeader = TRUE, title = h3("Table Differential Analysis results", icon('table')),
+          
+          withSpinner(DT::dataTableOutput("tableAD"), type = 8, color = "#CDCDE6", size = 1)
+    
+        )
+
+        )
+
+        )
 
       ),id="tabBox",width = 12
 

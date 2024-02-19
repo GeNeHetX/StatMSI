@@ -27,15 +27,20 @@ library(plotly)
   dashboardPage(skin = "purple",
   dashboardHeader(
             
-    title = "StatMSI"
+    title = "MStatI"
 
   
-),
+  ),
   dashboardSidebar(
     sidebarMenu(
       menuItem("Home", tabName = "home",icon=shiny::icon('home')),
-     
-      menuItem("Analysis", tabName = "tab1",icon=icon('arrows-rotate'))
+      fileInput('msi-files',"Load your imzml & ibd files", multiple=TRUE),
+      menuItem("Overview", tabName = "tab1",icon=icon('arrows-rotate')),
+      menuItem("Boxplot", tabName = "tab2",icon=icon('arrows-rotate')),
+      menuItem("Group Comparison", tabName = "tab3",icon=icon('arrows-rotate')),
+       menuItem("PCA", tabName = "tab4",icon=icon('arrows-rotate')),
+      menuItem("Classification", tabName = "tab5",icon=icon('arrows-rotate')),
+      menuItem("Differential Analysis", tabName = "tab6",icon=icon('arrows-rotate'))
       
     )
   ),
@@ -59,6 +64,17 @@ library(plotly)
         border-top-color:#262686;
       }
 
+      .box.box-solid.box-primary>.box-header {
+        color:#fff;
+        background:#AAAAAA
+      }
+      .box.box-solid.box-primary{
+        border-bottom-color:#AAAAAA;
+        border-left-color:#AAAAAA;
+        border-right-color:#AAAAAA;
+        border-top-color:#AAAAAA;
+      }
+
       .box.box-solid.box-success>.box-header {
         color:#fff;
         background:#CDCDE6;
@@ -71,196 +87,165 @@ library(plotly)
         border-top-color:#CDCDE6;
       }
       
+      
       .progress-bar {
-        background-color: #CDCDE6;
+        background-color: #777;
       }
-              
-      .btn-default {
-        background-color: #CDCDE6;
-        color: #262686;
-        border-color: #ddd;
-      }
-
       .nav-tabs-custom>.nav-tabs>li.active {
         border-top-color: #262686;
       }
               
     ")),     
 
-     tabItems(
-  tabItem(tabName ="home",
-
-          fluidRow(
-                   
-                      
-          box(width = 12, title = h1('Presentation', icon('display')), status = 'success', solidHeader = TRUE, collapsible = TRUE,
-              fluidRow(
-                column(width = 12,
-                       strong("Authors :"), "Audrey Beaufils(GeNeHetX)", br(),
-                       strong("Date :"), "February 2024", br(),
-                       strong("Contact :"), "audrey1.beaufils@inserm.fr", br(),
-                       strong("GitHub :"), a("GeNeHetX", href = "https://github.com/GeNeHetX/"), br(), br()
-
-       
-        )))
-          
-
-    )),
-    tabItem(tabName = "tab1",
-        box(width = 12, status = 'info', title = h1("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
-          column(width=3,
-        fileInput('msi-files',"Load your imzml & ibd files", multiple=TRUE))
-          #,        numericInput('nb_group',"Enter the number of groupe",2, min=2,step=1)
-        ),
-        fluidRow(
-        tabBox(
-    tabPanel("Overwiew",
-      fluidRow(
-        column(width=12,
-        box(width=NULL, status = 'info', solidHeader = TRUE, title = h3("File uploaded", icon('table')),
-         
-      withSpinner( DT::dataTableOutput("dtFiles"), type = 8, color = "#CDCDE6", size = 1))),
-        column(width=12,
-        box(width=NULL, status = 'info', solidHeader = TRUE, title = h3("File grouped", icon('table')),
-          
-          withSpinner( DT::dataTableOutput('groupe'), type = 8, color = "#CDCDE6", size = 1)))
-    
-        )
-     
-     ),   
-    tabPanel("Boxplot",
-        fluidRow(
-
-        column(width=6,
-        box(width=12, status = 'success', solidHeader = TRUE, title = h3("Mean Condition Boxplot", icon('chart-simple')),
-          withSpinner(plotOutput('bpMeanCond'), type = 8, color = "#CDCDE6", size = 1)
-        )
-        ),
-        column(width=6,
-        box(width=12, status = 'success', solidHeader = TRUE, title = h3("Mean Replicat Boxplot", icon('chart-simple')),
-            
-          withSpinner(plotOutput('bpMeanReplicat'), type = 8, color = "#CDCDE6", size = 1)
-        )
-        ),
-        column(width=6,
-        box(width=12, status = 'success', solidHeader = TRUE, title = h3("Upset Plot", icon('chart-simple')),
-            
-          withSpinner(plotOutput('upsetPlot'), type = 8, color = "#CDCDE6", size = 1)
-        )
-        )
-
-      
-    )
-        ),
-    tabPanel(" Group comparison",
-      
-      
-      fluidRow(
-
-        box(width=12, status = 'success', solidHeader = TRUE, title = h3("Comparison test results", icon('chart-simple')),
-           column(width=3,
-        uiOutput('mzChoiceUI')),
-           column(width=9,
-            h3('Test applied'),
-          tableOutput('pairwiseText'),
-          h3('Pairwise test Results'),
-          withSpinner(tableOutput('pairwiseTable'), type = 8, color = "#CDCDE6", size = 1),
-          withSpinner(plotOutput('bpPairwise'), type = 8, color = "#CDCDE6", size = 1)
-
+    tabItems(
+      tabItem(tabName ="home",
+        fluidRow(         
+          box(width = 12, title = h2('Presentation', icon('display')), status = 'success', solidHeader = TRUE, collapsible = TRUE,
+            fluidRow(
+              column(width = 12,
+               strong("Authors :"), "Audrey Beaufils(GeNeHetX & IMAP )", br(),
+               strong("Date :"), "February 2024", br(),
+               strong("Contact :"), "audrey1.beaufils@inserm.fr", br(),
+               strong("GitHub :"), a("GeNeHetX", href = "https://github.com/GeNeHetX/"), br(), br()
+              )
+            )
           )
         )
-        ),
-        
-
-      
-    
-
-
-    ),
-    tabPanel("PCA",
-      fluidRow(
-        box(width=12, status='success', title = h2('Graph of PCA',icon('chart-simple')), solidHeader = TRUE,collapsible=TRUE,
-          column(width=2,
-            selectInput("dim1", label = "Choose your first dimension",
-                choices = list("Dim1" = 1, "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 1),
-            selectInput("dim2", label = "Choose your second dimension",
-                choices = list( "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 2),
+      ),
+      tabItem(tabName = "tab1",
+        fluidRow(
+          column(width=12,
+            box(width=NULL, status = 'info', solidHeader = TRUE, title = h2("File uploaded", icon('table')),
+              withSpinner( DT::dataTableOutput("dtFiles"), type = 8, color = "#CDCDE6", size = 1)
+            )
           ),
-          column(width=5, 
-            h3('Individu graph'),
+          column(width=12,
+            box(width=NULL, status = 'info', solidHeader = TRUE, title = h2("File grouped", icon('table')),
+              withSpinner( DT::dataTableOutput('groupe'), type = 8, color = "#CDCDE6", size = 1)
+            )
+          )
+        )
+      ),   
+     tabItem(tabName = "tab2",
+        fluidRow(
+          column(width=6,
+            box(width=12, status = 'success', solidHeader = TRUE, title = h2("Mean Condition Boxplot", icon('chart-simple')),
+              withSpinner(plotOutput('bpMeanCond'), type = 8, color = "#CDCDE6", size = 1)
+            )
+          ),
+          column(width=6,
+            box(width=12, status = 'success', solidHeader = TRUE, title = h2("Mean Replicat Boxplot", icon('chart-simple')),
+              withSpinner(plotOutput('bpMeanReplicat'), type = 8, color = "#CDCDE6", size = 1)
+            )
+          ),
+          column(width=6,
+            box(width=12, status = 'success', solidHeader = TRUE, title = h2("Upset Plot", icon('chart-simple')),
+              withSpinner(plotOutput('upsetPlot'), type = 8, color = "#CDCDE6", size = 1)
+            )
+          )
+         )
+      ),
+      tabItem(tabName = "tab3",
+        
+        fluidRow(
+          box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
+            uiOutput('mzChoiceUI'),
+            p('add on cluster from segmentation'),
+            numericInput('ts_padj_pt', "Provide pvalue threshold",min=0, max=0.1, step = 0.01,value=0.05)  
+          ),
+          box(width=10, status = 'info', solidHeader = TRUE, title = h2("Comparison test results", icon('chart-simple')),
+              tableOutput('pairwiseText'),
+              h2('Pairwise test Results'),
+              withSpinner(tableOutput('pairwiseTable'), type = 8, color = "#CDCDE6", size = 1)
+            
+          )
+        ),
+        fluidRow(
+          box(width=12, status = 'success', solidHeader = TRUE, title = h2("Boxplot of mean", icon('chart-simple')),
+            withSpinner(plotOutput('bpPairwise'), type = 8, color = "#CDCDE6", size = 1) 
+          )
+        )
+      ),
+      tabItem(tabName = "tab4",
+        fluidRow(
+          tabBox(
+          tabPanel("Global PCA",
+            fluidRow(
+          box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
+            selectInput("dim1", label = "Choose your first dimension",
+                  choices = list("Dim1" = 1, "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 1),
+            selectInput("dim2", label = "Choose your second dimension",
+                  choices = list( "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 2),
+          ),
+          box(width=5, status='success', title = h2('Individu graph of PCA',icon('chart-simple')), solidHeader = TRUE,collapsible=TRUE,
             withSpinner(plotlyOutput("pcaGroup"), type = 8, color = "#CDCDE6", size = 1)
           ),
-          column(width=5,
-            h3('Variable graph'),
+          box(width=5, status='success', title = h2('Variable graph of PCA',icon('chart-simple')), solidHeader = TRUE,collapsible=TRUE,
             withSpinner(plotlyOutput("pcaMz"), type = 8, color = "#CDCDE6", size = 1)
-          ) 
-        ),
-        box(width=12,status='success',title = h2('Graph of PCA on mean groups',icon('chart-simple')),solidHeader = TRUE,collapsible=TRUE,
-          column(width=2,
+          )
+        )),
+        tabPanel("Mean  PCA",
+        fluidRow(
+          box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
             selectInput("dim1-2", label = "Choose your first dimension",
-                choices = list("Dim1" = 1, "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 1),
+                  choices = list("Dim1" = 1, "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 1),
             selectInput("dim2-2", label = "Choose your second dimension",
-                choices = list( "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 2),
-
+                  choices = list( "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 2)
           ),
-          column(width=10, 
+          box(width= 10, status='success', title = h2('Individu graph of PCA (mean)',icon('chart-simple')), solidHeader = TRUE,collapsible=TRUE,
             withSpinner(plotlyOutput("pcaGroupMean"), type = 8, color = "#CDCDE6", size = 1)
           )
-        ),
-        box(width=12,status='success',title = h2('Projection of PCA',icon('chart-simple')),solidHeader = TRUE,collapsible=TRUE,
-          column(width=2,
+        )),tabPanel("Projection PCA",
+        fluidRow(
+          box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
             selectInput("pca_dim", label = "Choose your first dimension",
-                choices = list("Dim1" = 1, "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 1)
+                  choices = list("Dim1" = 1, "Dim2" = 2,"Dim3" = 3, "Dim4" =4, "Dim5" = 5),selected = 1)
           ),
-          column(width=10, 
-            withSpinner(plotOutput("pcaObj"), type = 8, color = "#CDCDE6", size = 1)
+          box(width= 10, status='success', title = h2('Projection of PCA',icon('chart-simple')), solidHeader = TRUE,collapsible=TRUE,
+              withSpinner(plotOutput("pcaObj"), type = 8, color = "#CDCDE6", size = 1)
           )
         )
-      )
-    ),
-    tabPanel('Classification',
-      fluidRow(
-      box(width=12,status='success',title = h2('Projection of Classification spatial shrunken centroids',icon('chart-simple')),solidHeader = TRUE,collapsible=TRUE,
-          column(width=2,
+      ),id="tabBox",    width = 12))),
+      tabItem(tabName = "tab5",
+        fluidRow(
+          box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
             uiOutput('nbClustUI'),
-            numericInput("sparsity", "Please provide the sparsity parameter",min=0,step=1,value=0),
-            numericInput("smoothing_radius","Please provide the smoothing radius", min=0,step=1,value=0)
+              numericInput("sparsity", "Please provide the sparsity parameter",min=0,step=1,value=0),
+              numericInput("smoothing_radius","Please provide the smoothing radius", min=0,step=1,value=0)
           ),
-          column(width=10,
-            h3('Pixel segmentation'),
-            withSpinner(plotOutput("ssc"), type = 8, color = "#CDCDE6", size = 1),
-            h3('M/z segmentation'),
+          box(width=5,status='success',title = h2('Projection of Classification spatial shrunken centroids (pixel)',icon('chart-simple')),solidHeader = TRUE,collapsible=TRUE,
+              withSpinner(plotOutput("ssc"), type = 8, color = "#CDCDE6", size = 1)
+          ),
+          box(width=5,status='success',title = h2('Projection of Classification spatial shrunken centroids (m/z)',icon('chart-simple')),solidHeader = TRUE,collapsible=TRUE,
             withSpinner(plotOutput("SSCPlot"), type = 8, color = "#CDCDE6", size = 1)
           )
         )
-      )),
-    tabPanel("Differential Analysis" ,
-      fluidRow(
-        box(width=12,status='success',title = h2('Volcano plot',icon('chart-simple')),solidHeader = TRUE,collapsible=TRUE,
-          column(width=2,
+      ),
+      tabItem(tabName = "tab6",
+        fluidRow(
+          box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
             uiOutput('condChoiceUI'),
             uiOutput('condChoiceUI2'),
             numericInput('ts_padj', "Provide pvalue threshold",min=0, max=0.1, step = 0.01,value=0.05)
-
           ),
-          column(width=10, 
+          box(width=10, status='success', title = h2('Volcano Plot',icon('chart-simple')), solidHeader = TRUE,collapsible=TRUE,
             withSpinner(plotlyOutput("volcanoPlot"), type = 8, color = "#CDCDE6", size = 1),
-            
-            
           )
         ),
-        column(width=12,
-        box(width=NULL, status = 'info', solidHeader = TRUE, title = h3("Table Differential Analysis results", icon('table')),
-          
-          withSpinner(DT::dataTableOutput("tableAD"), type = 8, color = "#CDCDE6", size = 1)
-    
+        fluidRow(
+          column(width=6,
+            box(width=12, status = 'info', solidHeader = TRUE, title = h2("Table Differential Analysis results", icon('table')),
+              withSpinner(DT::dataTableOutput("tableAD"), type = 8, color = "#CDCDE6", size = 1)
+            )
+          ),
+          column(width=6,
+            box(width=12, status = 'info', solidHeader = TRUE, title = h2("Table Protein Enrichment Analysis results", icon('table')),
+              withSpinner(DT::dataTableOutput("resEnrichment"), type = 8, color = "#CDCDE6", size = 1)
+            )
+          )
         )
-
-        )
-
-        )
-
-      ),id="tabBox",width = 12
-
+      )
     )
-  )))))
+  )
+)
+

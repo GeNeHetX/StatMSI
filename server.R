@@ -23,6 +23,8 @@ library(factoextra)
 library(FactoMineR)
 library(ggupset)
 library(Cardinal)
+library(ComplexHeatmap)
+library(UpSetR)
 
 # Define server logic required to draw a histogram
 function(input, output, session) {
@@ -203,36 +205,34 @@ dataUpset <- reactive({
   colnames(mm) = unique(data$condition)
 
 
-tt = lapply(1:ncol(mm),function(x) ifelse(mm[,x] > 1,colnames(mm)[x],''))
+tt = lapply(1:ncol(mm),function(x) ifelse(mm[,x] > 1,0,1))
 yy = Reduce(cbind, tt)
+print(head(yy))
 
-
-
-mm$all=apply(yy,1, function(x) paste(x,collapse='-'))
-
-
-  mmComb = mm %>%
-mutate(
-all_list = as.list(strsplit(all, "-"))
-)
-
-return(mmComb)
+colnames(yy) = unique(data$condition)
+m = make_comb_mat(yy)
+print(m)
+return(m)
 
 
 })
 
- output$upsetPlot <- renderPlot(
+ output$upsetPlot <- renderPlot({
+  m = dataUpset()
+  UpSet(m,
+    left_annotation = upset_left_annotation(m,
+        add_numbers = TRUE, 
+        gp = gpar(fill = "#262686")
+    ),
+    top_annotation = upset_top_annotation(m, add_numbers = TRUE),
+    comb_col = "#262686",
+    bg_col = c("#DEDEF6", "#EEEEEE"),
+    bg_pt_col = "#CCCCFF")
+  })
 
-   ggplot(data = dataUpset(),mapping = aes(x = all_list)) +
-    geom_bar(fill = '#262686') +
-    scale_x_upset(order_by = "degree")+
-    geom_text(stat='count', aes(label=..count..),vjust=-0.5, size=5, color="black") +
-    labs(x='Annotation combination', y='Distribution') +
-    theme(axis.title = element_text(size=15))+
-    theme_combmatrix(combmatrix.label.text = element_text(color ='#262686', size=12)) + 
-    axis_combmatrix(levels = levels(as.factor(unlist(dataUpset()$all_list)))) 
+   
     
-  )
+  
 
 
 output$bpMeanReplicat <- renderPlot({
@@ -623,7 +623,7 @@ anadiff <- reactive({
   choiceCond = condition[c(as.numeric(input$condTarget),as.numeric(input$condTarget2))]
 
     sub = datas[, which(datas$condition %in% as.vector(choiceCond))] 
-
+    notif.ad <<- showNotification("Compute Differential Analysis", duration =0)
     mean = as.data.frame(summarizeFeatures(sub, "mean", as="DataFrame",groups=sub$condition))[,c(as.numeric(input$condTarget)+1,as.numeric(input$condTarget2)+1)]
     log2FC = log2(mean[,1]/mean[,2])
 
@@ -631,7 +631,7 @@ anadiff <- reactive({
   mtest <- meansTest(sub, ~ condition)
 
 df=data.frame(cbind(mz=mz(sub),log2FC= log2FC,mean,summary(mtest)))
-
+  removeNotification(notif.ad)
 return(df)
 
   })
@@ -644,6 +644,7 @@ output$tableAD <- DT::renderDT(server = FALSE, {
         extensions = c("Buttons"),
         options = list(
           dom = 'Bfrtip',
+          scrollX = TRUE,
           buttons = list(
             list(extend = "copy", text = "Copy", filename = "pairwise_table",
                  exportOptions = list(
@@ -693,11 +694,115 @@ output$tableAD <- DT::renderDT(server = FALSE, {
   output$volcanoPlot <- renderPlotly({ ggplotly(volcano()) })
 
 
+enrichment <- reactive({
+
+    library(fgsea,quietly=TRUE)
+    library(stringr,quietly=TRUE)
+
+      data.maldi = combineObject()$msiObject
+      peptides.uniprot = readRDS('dig_insilico_withnames_list.rds')
+      res.ad = anadiff()
+      rounds = 1 
+
+      annotation = sign(res.ad$log2FC) * res.ad$LR
+      names(annotation) = round(as.numeric(res.ad$mz,rounds))
+
+      background = lapply(peptides.uniprot,function(x) sort(as.vector(round(as.numeric(x[,4]),rounds))))
+      names(background) = sapply(peptides.uniprot, function(x) str_split(x[1,1],'\\|')[[1]][3])
+      
+
+      notif.gsea <<- showNotification("Compute Gene Set Enrichment Analysis (GSEA)", duration =0)
+      res = fgsea(stats = annotation, pathways = background)
+      lE_list = res$leadingEdge
+
+    
+      lE_vector = sapply(lE_list, paste, collapse=",")
+      res$leadingEdge = lE_vector
+      res = as.data.frame(na.omit(res))
+
+      removeNotification(notif.gsea)
+
+      
+    
+      
+      
+    return(res)
+  })
+
+  enrichmentSig <-reactive({
+    res=enrichment()
+    res.sig = res[res$padj < as.numeric(input$padj.gsea.th) & res$NES>as.numeric(input$NES.th),]
+    return(res.sig)
+
+    })
+
+output$resEnrichment <- DT::renderDataTable(
+    DT::datatable({
+      enrichment()},
+      extensions = 'Buttons',
+      caption="Table : Protein Enrichment",
+      options = list(
+        dom = 'Bfrtip',
+         scrollX = TRUE,
+       buttons = list(
+            list(extend = "copy", text = "Copy", filename = "pairwise_table",
+                 exportOptions = list(
+                   modifier = list(page = "all")
+                 )
+            ),
+            list(extend = "csv", text = "CSV", filename = "pairwise_table",
+                 exportOptions = list(
+                   modifier = list(page = "all")
+                 )
+            ),
+            list(extend = "excel", text = "Excel", filename = "pairwise_table",
+                 exportOptions = list(
+                   modifier = list(page = "all")
+                 )
+            )
+          )
+      ),  class = "display"
+    )
+)
+
+output$resEnrichmentSig <- DT::renderDataTable(
+  DT::datatable({
+  enrichmentSig()
+  },
+  extensions = 'Buttons',
+      caption="Table: Protein Enrichment significated",
+      options = list(
+        dom = 'Bfrtip',
+         scrollX = TRUE,
+        buttons = list(
+            list(extend = "copy", text = "Copy", filename = "pairwise_table",
+                 exportOptions = list(
+                   modifier = list(page = "all")
+                 )
+            ),
+            list(extend = "csv", text = "CSV", filename = "pairwise_table",
+                 exportOptions = list(
+                   modifier = list(page = "all")
+                 )
+            ),
+            list(extend = "excel", text = "Excel", filename = "pairwise_table",
+                 exportOptions = list(
+                   modifier = list(page = "all")
+                 )
+            )
+          )
+      ),  class = "display"
+    )
+)
+
+
+
+
+
+
+
+
 
 
 }
-
-
-
-
 

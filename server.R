@@ -6,12 +6,12 @@
 #
 #    http://shiny.rstudio.com/
 #
-packages <- c("shiny", "DT","shinydashboard","shinycssloaders","BiocManager", "ggplot2", "plotly", "reshape2", "factoextra", "FactoMineR", "devtools", "ggupset", "Cardinal","ggpubr")
+packages <- c("shiny", "DT","shinydashboard","shinycssloaders","BiocManager", "ggplot2", "plotly", "reshape2", "factoextra", "FactoMineR", "devtools", "ggupset", "Cardinal","ggpubr","uwot")
 new_packages <- packages[!(packages %in% installed.packages()[,"Package"])]
-if(length(new_packages)) install.packages(new_packages)
-if (!require("BiocManager", quietly = TRUE) && "BiocManager" %in% new_packages)
-  install.packages("BiocManager")
-BiocManager::install(new_packages,update=FALSE)
+#if(length(new_packages)) install.packages(new_packages)
+#if (!require("BiocManager", quietly = TRUE) && "BiocManager" %in% new_packages)
+#  install.packages("BiocManager")
+#BiocManager::install(new_packages,update=FALSE)
 
 options(shiny.maxRequestSize=100000*1024^2)
 library(shiny)
@@ -25,6 +25,7 @@ library(ggupset)
 library(Cardinal)
 library(ComplexHeatmap)
 library(UpSetR)
+library(uwot)
 
 # Define server logic required to draw a histogram
 function(input, output, session) {
@@ -259,6 +260,55 @@ output$bpMeanReplicat <- renderPlot({
 
 
 #PCA
+
+umap <- reactive({
+   data = combineObject()
+  spectra = t(as.matrix(data$matrix))
+
+
+  um = uwot::umap(spectra)
+  print(dim(um))
+  print(dim(spectra))
+  
+  return(um)
+
+
+  })
+
+umap.col<- reactive({
+     data = combineObject()
+ 
+        sapply(colnames(spectra),function(x) strsplit(x,'-')[[1]][1])
+  object = data$msiObject
+  spectra = data$matrix
+  um= umap()
+  col = NULL
+  if(input$col_umap == 'condition'){
+    col = sapply(colnames(spectra),function(x) strsplit(x,'-')[[1]][1])
+  }
+  else{
+    
+    col= colnames(spectra)
+  }
+  print(object$condition)
+  print(as.factor(run(object)))
+  df = data.frame(cbind(x=um[,1],y=um[,2],col=col))
+  df$x = as.numeric(df$x)
+  df$y = as.numeric(df$y)
+  print(dim(df))
+  return(df)
+
+  })
+
+output$umap <- renderPlot({
+  df= umap.col()
+  plot=ggplot(data=df, aes(x=x, y=y, col=col)) +
+      geom_point(size=1) + theme_minimal() 
+
+    return(plot)
+
+
+})
   pca <- reactive({
     object = combineObject()
     spectra = object$matrix
@@ -461,6 +511,19 @@ output$bpMeanReplicat <- renderPlot({
                   choices = mzChoice()))
 
   })
+        output$clustChoiceUI <-renderUI({
+   
+    return(selectInput("clustTarget1", label = "Choose cluster target to compare",
+                  choices = as.list(1:as.numeric(input$nbClust))))
+
+  })
+
+                output$clustChoiceUI2 <-renderUI({
+   
+    return(selectInput("clustTarget2", label = "Choose cluster target to compare",
+                  choices = as.list(2:as.numeric(input$nbClust))))
+
+  })
 
       condChoice <- reactive({
       object = combineObject()
@@ -525,7 +588,10 @@ pairwize <- reactive({
   table = as.data.frame(cbind(replicat= colnames(data), intensity = as.vector(f_data)))
 
   table$intensity = as.numeric(table$intensity)
-  table$condition = sapply(table$replicat,function(x) strsplit(x,'-')[[1]][1])
+  if(input$groupes2 == 'Group')
+    table$condition = sapply(table$replicat,function(x) strsplit(x,'-')[[1]][1])
+  else
+    table$condition = SSC()$cluster
  
   return(table)
 
@@ -579,7 +645,7 @@ anova <- reactive({
   }
   text= as.data.frame(text)
   colnames(text)= c('Test','Name','H0','p-value','Statistic','Interpretation')
-rownames(pairwise_table) = unique(data$condition)[-1]  
+
   return(list(pairwise_table=pairwise_table,text=text))
 
 })
@@ -595,24 +661,31 @@ output$pairwiseText <-renderTable({
   anova()$text
   })
 
-ssc_test <-reactive({
+SSC <-reactive({
   req(input$nbClust)
    datas = combineObject()
-  spatialShrunkenCentroids(datas$msiObject,  r=1, s=0, k = as.numeric(input$nbClust))
+  ssc2 = spatialShrunkenCentroids(datas$msiObject,  r=1, s=0, k = as.numeric(input$nbClust))
+  cluster = ssc2@resultData@listData[[1]]$class
+
+  return(list(ssc = ssc2, cluster = cluster))
 
   })
 output$ssc <- renderPlot({
   req(input$'msi-files')
-  image(ssc_test())
+  image(SSC()$ssc)
 
 })
 
 output$SSCPlot <- renderPlot({
   req(input$'msi-files')
-  plot(ssc_test())
+  plot(SSC()$ssc)
 
 })
 
+# Statistiques pairées Mann withney 
+# test sur moyenne
+# Ajouter un autre truc que la PCA
+# UMAP et tSNE
 
 anadiff <- reactive({
   req(input$condTarget,input$condTarget2)
@@ -620,12 +693,22 @@ anadiff <- reactive({
   datas = combineObject()$msiObject
   condition = unique(datas$condition)
 
+  if(input$groupes == 'Group'){
   choiceCond = condition[c(as.numeric(input$condTarget),as.numeric(input$condTarget2))]
+  sub = datas[, which(datas$condition %in% as.vector(choiceCond))] 
+  mean = as.data.frame(summarizeFeatures(sub, "mean", as="DataFrame",groups=sub$condition))[,c(as.numeric(input$condTarget)+1,as.numeric(input$condTarget2)+1)]
 
-    sub = datas[, which(datas$condition %in% as.vector(choiceCond))] 
+  }
+  else{
+    ssc.clust = SSC()$cluster
+    sub = datas[, which(ssc.clust%in% as.vector(c(input$clustTarget1,input$clustTarget2)))] 
+    ssc.clust.sub = ssc.clust[which(ssc.clust %in% as.vector(c(input$clustTarget1,input$clustTarget2)))]
+    mean = as.data.frame(summarizeFeatures(sub, "mean", as="DataFrame",groups=ssc.clust.sub))[,c(as.numeric(input$clustTarget1),as.numeric(input$clustTarget2))]
+
+  }
+    
     notif.ad <<- showNotification("Compute Differential Analysis", duration =0)
-    mean = as.data.frame(summarizeFeatures(sub, "mean", as="DataFrame",groups=sub$condition))[,c(as.numeric(input$condTarget)+1,as.numeric(input$condTarget2)+1)]
-    log2FC = log2(mean[,1]/mean[,2])
+        log2FC = log2(mean[,1]/mean[,2])
 
   
   mtest <- meansTest(sub, ~ condition)

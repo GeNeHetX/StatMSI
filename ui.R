@@ -146,11 +146,11 @@ library(plotly)
          )
       ),
       tabItem(tabName = "tab3",
-        
+
         fluidRow(
           box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
             uiOutput('mzChoiceUI'),
-            p('add on cluster from segmentation'),
+            selectInput('groupes2','Please choose between experimental group and cluster',c('Group','Cluster')),
             numericInput('ts_padj_pt', "Provide pvalue threshold",min=0, max=0.1, step = 0.01,value=0.05)  
           ),
           box(width=10, status = 'info', solidHeader = TRUE, title = h2("Comparison test results", icon('chart-simple')),
@@ -205,7 +205,19 @@ library(plotly)
               withSpinner(plotOutput("pcaObj"), type = 8, color = "#CDCDE6", size = 1)
           )
         )
-      ),id="tabBox",    width = 12))),
+      ),tabPanel("UMAP",
+      fluidRow(
+          box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
+            selectInput("col_umap", label = "Color by ",
+                  choices = list("Condition" = 'condition', "Replicat" = 'replicat'))
+          ),
+          box(width= 10, status='success', title = h2('UMAP visualization',icon('chart-simple')), solidHeader = TRUE,collapsible=TRUE,
+              withSpinner(plotOutput("umap"), type = 8, color = "#CDCDE6", size = 1)
+          )
+
+          )
+
+      ),       id="tabBox",    width = 12))),
       tabItem(tabName = "tab5",
         fluidRow(
           box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
@@ -224,8 +236,17 @@ library(plotly)
       tabItem(tabName = "tab6",
         fluidRow(
           box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
-            uiOutput('condChoiceUI'),
-            uiOutput('condChoiceUI2'),
+            selectInput('groupes','Please choose between experimental group and cluster',c('Group','Cluster')),
+            conditionalPanel(condition = "input.groupes == 'Group'",
+                  uiOutput('condChoiceUI'),
+                  uiOutput('condChoiceUI2'),
+            ),
+            conditionalPanel(condition = "input.groupes == 'Cluster'",
+
+                uiOutput('clustChoiceUI'),
+                uiOutput('clustChoiceUI2'),
+            ),
+            
             numericInput('ts_padj', "Provide pvalue threshold",min=0, max=0.1, step = 0.01,value=0.05)
           ),
           box(width=10, status='success', title = h2('Volcano Plot',icon('chart-simple')), solidHeader = TRUE,collapsible=TRUE,

@@ -26,6 +26,7 @@ library(Cardinal)
 library(ComplexHeatmap)
 library(UpSetR)
 library(uwot)
+library(rstatix)
 
 # Define server logic required to draw a histogram
 function(input, output, session) {
@@ -586,7 +587,8 @@ pairwize <- reactive({
   f_data = data[as.numeric(input$mzTarget),]
 
   table = as.data.frame(cbind(replicat= colnames(data), intensity = as.vector(f_data)))
-
+  num_r = sapply(table$replicat,function(x) strsplit(x,'-')[[1]][2])
+  table$num = as.factor(num_r)
   table$intensity = as.numeric(table$intensity)
   if(input$groupes2 == 'Group')
     table$condition = sapply(table$replicat,function(x) strsplit(x,'-')[[1]][1])
@@ -607,7 +609,7 @@ output$bpPairwise <- renderPlot({
   })
 
 
-anova <- reactive({
+indepTest <- reactive({
 
   data = pairwize()
   aov1 = aov(intensity ~ condition, data = data)
@@ -621,45 +623,142 @@ anova <- reactive({
 
   text = rbind(text,c('Homoscedasticity','Bartlett','H0 : Samples variances are equal',var$p.value,var$statistic,inter))
 
-  if( normality$p.value > 0.05 || var$p.value > 0.5){
+
     test = 'anova'
     sm = summary(aov1)[[1]]
     stat = sm[["F value"]][1]
     padj = sm[["Pr(>F)"]][1]
     inter = ifelse(padj < 0.05,'=> Reject H0, At least two samples means are not equal','=> No reject H0, Samples means are equal')
-    text = rbind(text,c('Group comparison','ANOVA','H0 : Samples means are equal',padj,stat,inter))
+    text = rbind(text,c('Parametric group comparison ','ANOVA','H0 : Samples means are equal',padj,stat,inter))
     pairwise_test = 't.test'
-    pairwise_table = as.data.frame(pairwise.t.test(as.numeric(data$intensity), as.factor(data$condition), p.adjust.method = "BH")$p.value)
-  }
-  else{
+    pairwise_table.t.test = as.data.frame(pairwise.t.test(as.numeric(data$intensity), as.factor(data$condition), p.adjust.method = "BH")$p.value)
+
+
     test = 'kruskal'
     res= kruskal.test(intensity ~ condition, data = data)
     stat = res$statistic
     padj = res$p.value 
     inter = ifelse(padj < 0.05,'=> Reject H0, At least two samples means are not equal','=> No reject H0, Samples means are equal')
 
-    text = rbind(text,c('Group comparison','Kruskal-Wallis','H0 : Samples means are equal',padj,stat,inter))
+    text = rbind(text,c('Non parametric group comparison','Kruskal-Wallis','H0 : Samples means are equal',padj,stat,inter))
     pairwise_test = 'wilcoxon'
-    pairwise_table = as.data.frame(pairwise.wilcox.test(as.numeric(data$intensity), as.factor(data$condition), p.adjust.method = "BH")$p.value)
+    pairwise_table.wilcoxon = as.data.frame(pairwise.wilcox.test(as.numeric(data$intensity), as.factor(data$condition), p.adjust.method = "BH")$p.value)
 
-  }
+
   text= as.data.frame(text)
   colnames(text)= c('Test','Name','H0','p-value','Statistic','Interpretation')
 
-  return(list(pairwise_table=pairwise_table,text=text))
+  return(list(pairwise_table.t.test=pairwise_table.t.test,pairwise_table.wilcoxon = pairwise_table.wilcoxon ,text=text))
 
 })
 
-output$pairwiseTable <- renderTable({
+output$pairwiseTableTTest <- renderTable({
 
+        if(input$'indep_or_dep' == 'Independant')
+          indepTest()$pairwise_table.t.test
+        else
+            depTest()$pairwise_table.t.test      
+    },rownames=TRUE)
+
+output$pairwiseTableWilcox <- renderTable({
+       if(input$'indep_or_dep' == 'Independant')
+          indepTest()$pairwise_table.wilcoxon
+        else
+            depTest()$pairwise_table.wilcoxon      
      
-        anova()$pairwise_table
+        
         
     },rownames=TRUE)
 
+
 output$pairwiseText <-renderTable({
-  anova()$text
+    if(input$'indep_or_dep' == 'Independant')
+          indepTest()$text
+        else
+            depTest()$text
   })
+
+
+
+
+
+
+
+
+
+
+depTest <- reactive({
+
+  data = pairwize()
+  #normality = data %>%group_by(condition) %>%
+  #shapiro_test(intensity)
+  #if(length(which(normality$p > 0.05)) == length(data$condition) )
+  normality = 0.05
+
+print(data)
+  
+  inter = ifelse( TRUE,
+    #length(which(normality$p > 0.05)) == length(data$condition),
+    '=> No reject H0, Residus are  normally distributed','=> Reject H0, Residus are not normally distributed')
+  
+  #text = c('normality','Shapiro test','H0 : Residus are normally distributed', normality$p.value,normality$statistic,inter)
+  text = c('normality','Shapiro test','H0 : Residus are normally distributed', normality,normality,inter)
+  
+  var = bartlett.test(intensity ~ condition, data = data)
+  inter = ifelse(var$p.value < 0.05, '=> Reject H0, At least two samples variances are not equal','=> No reject H0, Samples variances are equal')
+
+  text = rbind(text,c('Homoscedasticity','Bartlett','H0 : Samples variances are equal',var$p.value,var$statistic,inter))
+
+
+    test = 'Grouped Anova'
+    data2 <-data %>% 
+    group_by(replicat)  %>%
+    summarise(intensity = mean(intensity), num= names(which.max(table(num))), condition = names(which.max(table(condition))))
+    print(test)
+
+    aov1= anova_test( dv = intensity, wid = num, within = condition,data=data2)
+    aov_table=get_anova_table(aov1)
+    stat = aov_table$F
+    padj = aov_table$p
+    inter = ifelse(padj < 0.05,'=> Reject H0, At least two samples means are not equal','=> No reject H0, Samples means are equal')
+    text = rbind(text,c('Parametric group comparison ','Grouped ANOVA','H0 : Samples means are equal',padj,stat,inter))
+    pairwise_test = 't.test paired'
+    print(pairwise_test)
+    print(data2)
+    print(data2$intensity)
+    print(data2$condition)
+    pt.test = pairwise.t.test(as.numeric(data2$intensity), as.factor(data2$condition), p.adjust.method = "BH",paired=TRUE)$p.value
+    print(pt.test)
+    pairwise_table.t.test = as.data.frame(pt.test)
+
+
+    test = 'Friedman'
+    print(test)
+    res= friedman_test(intensity ~ condition | num,data=data2)
+    stat = res$statistic
+    padj = res$p
+    inter = ifelse(padj < 0.05,'=> Reject H0, At least two samples means are not equal','=> No reject H0, Samples means are equal')
+
+    text = rbind(text,c('Non parametric group comparison','Friedman','H0 : Samples means are equal',padj,stat,inter))
+    pairwise_test = 'wilcoxon'
+    print(pairwise_test)
+    pairwise_table.wilcoxon = as.data.frame(pairwise.wilcox.test(as.numeric(data2$intensity), as.factor(data2$condition), p.adjust.method = "BH",paired=TRUE)$p.value)
+
+
+  text= as.data.frame(text)
+  colnames(text)= c('Test','Name','H0','p-value','Statistic','Interpretation')
+
+  return(list(pairwise_table.t.test=pairwise_table.t.test,pairwise_table.wilcoxon = pairwise_table.wilcoxon ,text=text))
+
+})
+
+
+
+
+
+
+
+
 
 SSC <-reactive({
   req(input$nbClust)

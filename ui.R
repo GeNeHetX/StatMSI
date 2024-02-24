@@ -151,12 +151,17 @@ library(plotly)
           box(width = 2, status = 'primary', title = h2("Settings", icon('cogs')), solidHeader = TRUE, collapsible=TRUE,
             uiOutput('mzChoiceUI'),
             selectInput('groupes2','Please choose between experimental group and cluster',c('Group','Cluster')),
-            numericInput('ts_padj_pt', "Provide pvalue threshold",min=0, max=0.1, step = 0.01,value=0.05)  
+            numericInput('ts_padj_pt', "Provide pvalue threshold",min=0, max=0.1, step = 0.01,value=0.05),
+            selectInput('pixel_or_mean','Please choose if the analysis is run on : ',c('Pixel','Mean')),
+            selectInput('indep_or_dep','Please choose if your sample are : ',c('Dependant','Independant'))
+
           ),
           box(width=10, status = 'info', solidHeader = TRUE, title = h2("Comparison test results", icon('chart-simple')),
               tableOutput('pairwiseText'),
-              h2('Pairwise test Results'),
-              withSpinner(tableOutput('pairwiseTable'), type = 8, color = "#CDCDE6", size = 1)
+              column(width=6,
+              h2('Pairwise t-test results'),
+              withSpinner(tableOutput('pairwiseTableTTest'), type = 8, color = "#CDCDE6", size = 1)),
+              column(width=6,h2('Pairwise wilcoxon results'),withSpinner(tableOutput('pairwiseTableWilcox'), type = 8, color = "#CDCDE6", size = 1)) 
             
           )
         ),

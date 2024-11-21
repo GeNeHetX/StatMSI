@@ -10,7 +10,7 @@ MStatI is a tool for analyzing MSI data, focusing on identifying differentially 
   - **Principal Component Analysis (PCA)**<br>
   PCA is a statistical method used to explore relationships between variables in a dataset and reduce its dimensionality.<br><br>
 
-  - **Differential Expression Analysis by DESeq2**<br>
+  - **Differential Expression Analysis**<br>
   Linear model regression is a method used for identifying peptides with significantly different expression levels between sample groups.<br><br>
 
   - **Gene Set Enrichment Analysis (GSEA)**<br>
@@ -29,20 +29,6 @@ If R is installed, you can launch the application directly via a command termina
 
 
 ## Installation 
-
-With internet : 
-
-1 - First-time use MStatI, run this command in a R terminal
-```R
-    install.packages(c("shiny", "DT","shinydashboard","shinycssloaders","BiocManager", "ggplot2", "plotly", "reshape2", "factoextra", "FactoMineR", "devtools", "ggupset", "Cardinal","ggpubr","uwot"))
-```
-
-2- Then, run this command :
-```R
-   shiny::runGitHub('StatMSI', 'GeNeHetX', subdir='MStatI' ,ref='main')
-```
-ps : you can precise the version thanks to ref='', for example : ref='v.1.0.0'
-___________________________________________________
 
 Without internet, (use just to download and run the following commands without a connection) : 
 

@@ -32,6 +32,15 @@ library(rstatix)
 function(input, output, session) {
 # HOME Page
 
+output$pca_Image <- renderImage({
+
+    filename = "pca.png"
+
+    list(src = filename,
+      width = 800,
+      alt = "overview RNA-Seq")
+
+  }, deleteFile = FALSE)
 
 
 # Overview
@@ -205,13 +214,15 @@ dataUpset <- reactive({
   data = object$msiObject
   mm = as.data.frame(summarizeFeatures(data, "mean", as="DataFrame",groups=data$condition))[,-1]
   colnames(mm) = unique(data$condition)
+  print(mm)
 
 
-tt = lapply(1:ncol(mm),function(x) ifelse(mm[,x] > 1,0,1))
+tt = lapply(1:ncol(mm),function(x) ifelse(mm[,x] > 1,1,0))
 yy = Reduce(cbind, tt)
-print(head(yy))
 
 colnames(yy) = unique(data$condition)
+print(yy)
+
 m = make_comb_mat(yy)
 print(m)
 return(m)
@@ -882,16 +893,16 @@ enrichment <- reactive({
     library(stringr,quietly=TRUE)
 
       data.maldi = combineObject()$msiObject
-      peptides.uniprot = readRDS('dig_insilico_withnames_list.rds')
+      #peptides.uniprot = readRDS('dig_insilico_withnames_list.rds')
       res.ad = anadiff()
       rounds = 1 
 
       annotation = sign(res.ad$log2FC) * res.ad$LR
       names(annotation) = round(as.numeric(res.ad$mz,rounds))
 
-      background = lapply(peptides.uniprot,function(x) sort(as.vector(round(as.numeric(x[,4]),rounds))))
-      names(background) = sapply(peptides.uniprot, function(x) str_split(x[1,1],'\\|')[[1]][3])
-      
+      #background = lapply(peptides.uniprot,function(x) sort(as.vector(round(as.numeric(x[,4]),rounds))))
+      #names(background) = sapply(peptides.uniprot, function(x) str_split(x[1,1],'\\|')[[1]][3])
+      background = readRDS(input$org)
 
       notif.gsea <<- showNotification("Compute Gene Set Enrichment Analysis (GSEA)", duration =0)
       res = fgsea(stats = annotation, pathways = background)

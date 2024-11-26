@@ -30,8 +30,6 @@ If R is installed, you can launch the application directly via a command termina
 
 ## Installation :
 
-Without internet, (use just to download and run the following commands without a connection) : 
-
 1- If you are a git user, clone the MStatI folder, otherwise download the MStatI code zip via the green "<>Code" button.
 
 ```bash

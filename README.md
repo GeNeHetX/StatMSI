@@ -28,7 +28,7 @@ If R is installed, you can launch the application directly via a command termina
 <br>
 
 
-## Installation 
+## Installation :
 
 Without internet, (use just to download and run the following commands without a connection) : 
 
@@ -52,5 +52,30 @@ or
   shiny::runApp()
 ```
 <br>
+
+## Upload data:
+
+### IMZML & IBD : 
+You have to upload the IMZML and IBD file already processed ( normalization + baseline removal + peak picking). The name of IMZML and IBD files must be the same for a chosen sample. 
+Additionnaly the name must follow the following pattern, id_group - id_replicat - ... .imzml/ibd
+<br>
+
+### Example :
+<ul>
+  <li>Control group with 2 replicats :</li> 
+  <ul>
+    <li>Replicat n°1 :ctrl-1-total ion count.ibd  ; ctrl-1-total ion count.imzML </li>
+    <li> Replicat n°2 : ctrl-2-total ion count.ibd ;ctrl-2-total ion count.imzML </li>
+  </ul>
+<br/> <br/>
+  <li>Condition 1 with 3 replicat : </li> 
+  <ul>
+    <li> group1-1-total ion count.ibd ; group1-1-total ion count.imzML </li>
+    <li> group1-2-total ion count.ibd ;group1-2-total ion count.imzML </li>
+    <li> group1-3-total ion count.ibd ; group1-3-total ion count.imzML </li>
+  </ul>
+
+
+
 
 

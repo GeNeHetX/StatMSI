@@ -44,7 +44,7 @@ If R is installed, you can launch the application directly via a command termina
     if (!require("BiocManager", quietly = TRUE))
       install.packages("BiocManager")
 
-    BiocManager::install("Cardinal")
+    BiocManager::install(c("Cardinal","ComplexHeatmap","UpSetR"))
   shiny::runApp()
 ```
 or

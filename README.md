@@ -54,6 +54,7 @@ or
 ## Upload data:
 
 ### IMZML & IBD : 
+You have to first copy your file in the same folder than the shiny application, where are ui.R and server.R 
 You have to upload the IMZML and IBD file already processed ( normalization + baseline removal + peak picking). The name of IMZML and IBD files must be the same for a chosen sample. 
 Additionnaly the name must follow the following pattern, id_group - id_replicat - ... .imzml/ibd
 <br>

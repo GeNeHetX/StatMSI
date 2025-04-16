@@ -2,7 +2,7 @@
 
 **Authors:** [@AudreyBeaufils](https://github.com/AudreyBeaufils) (GeNeHetX & IMAP)  
 **Date:** February 2024  
-**Contact:** [audrey1.beaufils@inserm.fr](mailto:audrey1.beaufils@inserm.fr),
+**Contact:** [audrey.beaufils@inserm.fr](mailto:audrey.beaufils@inserm.fr),
 
 ## Overview
 MStatI is a tool for analyzing MSI data, focusing on identifying differentially expressed peptides and annotating them with protein.<br><br>

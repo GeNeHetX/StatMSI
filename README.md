@@ -40,7 +40,7 @@ If R is installed, you can launch the application directly via a command termina
      
 - First-time use MStatI
 ```R
-   install.packages(c("shiny", "DT","shinydashboard","shinycssloaders","BiocManager", "ggplot2", "plotly", "reshape2", "factoextra", "FactoMineR", "devtools", "ggupset", "Cardinal","ggpubr","uwot"))
+   install.packages(c("shiny", "DT","shinydashboard","shinycssloaders","BiocManager", "ggplot2", "plotly", "reshape2", "factoextra", "FactoMineR", "devtools", "ggupset", "Cardinal","ggpubr","uwot","nortest"))
     if (!require("BiocManager", quietly = TRUE))
       install.packages("BiocManager")
 
